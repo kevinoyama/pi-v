@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
+import { format } from 'date-fns';
 import GlobalStyle from './styles/globalStyles';
 
 import Header from './components/Header';
@@ -9,7 +10,47 @@ import BodyView from './components/BodyView';
 import Button from './components/Button';
 import Table from './components/Table';
 
+import api from './services/api';
+
+import { roundDecimal } from './utils/roundDecimal';
+
+interface IResponseData {
+  data: {
+    temperatura_do_ambiente: number;
+    humidade_do_solo: number;
+    luminosidade: number;
+    humidade_do_ar: number;
+  };
+}
+
 const App: React.FC = () => {
+  const [airTemperature, setAirTemperature] = useState(0);
+  const [soilHumidity, setSoilHumidity] = useState(0);
+  const [luminosity, setLuminosity] = useState(0);
+  const [airHumidity, setAirHumidity] = useState(0);
+  const [date, setDate] = useState(new Date());
+
+  const handleFetchData = useCallback(async () => {
+    const response: IResponseData = await api.get('/');
+
+    const {
+      humidade_do_ar,
+      humidade_do_solo,
+      luminosidade,
+      temperatura_do_ambiente,
+    } = response.data;
+
+    setAirHumidity(humidade_do_ar);
+    setAirTemperature(temperatura_do_ambiente);
+    setLuminosity(luminosidade);
+    setSoilHumidity(humidade_do_solo);
+    setDate(new Date());
+  }, []);
+
+  useEffect(() => {
+    handleFetchData();
+  }, [handleFetchData]);
+
   return (
     <>
       <Header>
@@ -27,18 +68,23 @@ const App: React.FC = () => {
         </svg>
       </Header>
       <BodyView>
+        <div style={{ width: '100%' }}>
+          <Title>
+            Última atualização em: {format(date, 'dd/MM/yyyy HH:mm')}
+          </Title>
+        </div>
         <Table>
           <tr>
             <td>
               <Card>
                 <Title>Temperatura do Ambiente</Title>
-                <InfoDisplay>98%</InfoDisplay>
+                <InfoDisplay>{roundDecimal(airTemperature)} ºC</InfoDisplay>
               </Card>
             </td>
             <td>
               <Card>
                 <Title>Humidade do Solo</Title>
-                <InfoDisplay>98%</InfoDisplay>
+                <InfoDisplay>{roundDecimal(soilHumidity)} %</InfoDisplay>
               </Card>
             </td>
           </tr>
@@ -46,19 +92,19 @@ const App: React.FC = () => {
             <td>
               <Card>
                 <Title>Luminosidade</Title>
-                <InfoDisplay>98%</InfoDisplay>
+                <InfoDisplay>{roundDecimal(luminosity)} %</InfoDisplay>
               </Card>
             </td>
             <td>
               <Card>
                 <Title>Humidade do Ar</Title>
-                <InfoDisplay>98%</InfoDisplay>
+                <InfoDisplay>{roundDecimal(airHumidity)} %</InfoDisplay>
               </Card>
             </td>
           </tr>
         </Table>
         <div style={{ width: '100%', display: 'flex', alignItems: 'center' }}>
-          <Button>Atualizar</Button>
+          <Button onClick={handleFetchData}>Atualizar</Button>
         </div>
       </BodyView>
       <GlobalStyle />
